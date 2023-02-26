@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Classe {
+  Cla_id          Int        @id @default(autoincrement())
+  Cla_intitule    String     @db.VarChar(10)
+  Cla_annee_promo Int        @db.Year
+  Cla_parcours_id Int
+  Parcours        Parcours   @relation(fields: [Cla_parcours_id], references: [Par_id], onUpdate: Restrict, map: "FK_Cla_parcours_id")
+  Cours           Cours[]
+  Etudiant        Etudiant[]
+
+  @@index([Cla_parcours_id], map: "FK_Cla_parcours_id")
+}
+
+model Cours {
+  Cou_id             Int         @id @default(autoincrement())
+  Cou_classe_id      Int?
+  Cou_enseignant_id  Int?
+  Cou_matiere_id     Int?
+  Cou_intitule       String      @db.VarChar(50)
+  Cou_datetime_debut DateTime    @db.DateTime(0)
+  Cou_datetime_fin   DateTime    @db.DateTime(0)
+  Classe             Classe?     @relation(fields: [Cou_classe_id], references: [Cla_id], onDelete: Restrict, onUpdate: Restrict, map: "FK_Cou_classe_id")
+  Enseignant         Enseignant? @relation(fields: [Cou_enseignant_id], references: [Ens_id], onDelete: Restrict, onUpdate: Restrict, map: "FK_Cou_enseignant_id")
+  Matiere            Matiere?    @relation(fields: [Cou_matiere_id], references: [Mat_id], onDelete: Restrict, onUpdate: Restrict, map: "FK_Cou_matiere_id")
+
+  @@index([Cou_classe_id], map: "FK_Cou_classe_id")
+  @@index([Cou_enseignant_id], map: "FK_Cou_enseignant_id")
+  @@index([Cou_matiere_id], map: "FK_Cou_matiere_id")
+}
+
+model Enseignant {
+  Ens_id             Int                    @id @default(autoincrement())
+  Ens_prenom         String                 @db.VarChar(50)
+  Ens_nom            String                 @db.VarChar(50)
+  Ens_date_naissance DateTime               @db.Date
+  Ens_societe_id     Int?
+  Ens_statut         Enseignant_Ens_statut?
+  Cours              Cours[]
+  Societe            Societe?               @relation(fields: [Ens_societe_id], references: [Soc_id], onDelete: Restrict, onUpdate: Restrict, map: "FK_Ens_societe_id")
+  Parcours           Parcours[]
+  Prestation         Prestation[]
+
+  @@index([Ens_societe_id], map: "FK_Ens_societe_id")
+}
+
+model Etudiant {
+  Etu_id             Int      @id @default(autoincrement())
+  Etu_prenom         String   @db.VarChar(50)
+  Etu_nom            String   @db.VarChar(50)
+  Etu_date_naissance DateTime @db.Date
+  Etu_id_classe      Int
+  Classe             Classe   @relation(fields: [Etu_id_classe], references: [Cla_id], onUpdate: Restrict, map: "FK_Etu_id_classe")
+  Note               Note[]
+
+  @@index([Etu_id_classe], map: "FK_Etu_id_classe")
+}
+
+model Matiere {
+  Mat_id       Int          @id @default(autoincrement())
+  Mat_intitule String       @db.VarChar(50)
+  Cours        Cours[]
+  Note         Note[]
+  Prestation   Prestation[]
+  Programme    Programme[]
+}
+
+model Note {
+  Not_id          Int      @id @default(autoincrement())
+  Not_value       Float
+  Not_coefficient Float
+  Not_etu_id      Int
+  Not_matiere_id  Int
+  Etudiant        Etudiant @relation(fields: [Not_etu_id], references: [Etu_id], onUpdate: Restrict, map: "FK_Not_id")
+  Matiere         Matiere  @relation(fields: [Not_matiere_id], references: [Mat_id], onUpdate: Restrict, map: "FK_Not_matiere_id")
+
+  @@index([Not_etu_id], map: "FK_Not_id")
+  @@index([Not_matiere_id], map: "FK_Not_matiere_id")
+}
+
+model Parcours {
+  Par_id             Int         @id @default(autoincrement())
+  Par_intitule       String      @unique(map: "U_Par_intitule") @db.VarChar(50)
+  Par_responsable_id Int?
+  Par_annee_lmd      Int
+  Classe             Classe[]
+  Enseignant         Enseignant? @relation(fields: [Par_responsable_id], references: [Ens_id], onDelete: Restrict, onUpdate: Restrict, map: "FK_Par_responsable_id")
+  Programme          Programme[]
+
+  @@index([Par_responsable_id], map: "FK_Par_responsable_id")
+}
+
+model Prestation {
+  Pre_matiere_id    Int
+  Pre_enseignant_id Int
+  Pre_prix_heure    Float?
+  Enseignant        Enseignant @relation(fields: [Pre_enseignant_id], references: [Ens_id], onUpdate: Restrict, map: "FK_enseignant_id")
+  Matiere           Matiere    @relation(fields: [Pre_matiere_id], references: [Mat_id], onUpdate: Restrict, map: "FK_pre_matiere_id")
+
+  @@id([Pre_matiere_id, Pre_enseignant_id])
+  @@index([Pre_enseignant_id], map: "FK_enseignant_id")
+}
+
+model Programme {
+  Pro_parcours_id Int
+  Pro_matiere_id  Int
+  Matiere         Matiere  @relation(fields: [Pro_matiere_id], references: [Mat_id], onUpdate: Restrict, map: "FK_Pro_matiere_id")
+  Parcours        Parcours @relation(fields: [Pro_parcours_id], references: [Par_id], onUpdate: Restrict, map: "FK_Pro_parcours_id")
+
+  @@id([Pro_parcours_id, Pro_matiere_id])
+  @@index([Pro_matiere_id], map: "FK_Pro_matiere_id")
+}
+
+model Societe {
+  Soc_id     Int          @id @default(autoincrement())
+  Soc_nom    String       @unique(map: "U_Soc_nom") @db.VarChar(50)
+  Enseignant Enseignant[]
+}
+
+enum Enseignant_Ens_statut {
+  interne
+  externe
+}
